@@ -1,89 +1,37 @@
 name: Build Wass APK
-on: [push]
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
 jobs:
   build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create Wass Project
-        run: |
-          mkdir -p app/src/main/java/com/wass/app
-          mkdir -p app/src/main/assets
-          mkdir -p app/src/main/res/layout
-          
-          cat > app/build.gradle << 'EOF'
-          plugins { id 'com.android.application' }
-          android {
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.wass.app"
-                  minSdk 21
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes { release { minifyEnabled false } }
-          }
-          dependencies {}
-          EOF
-          
-          cat > settings.gradle << 'EOF'
-          include ':app'
-          EOF
-          
-          cat > build.gradle << 'EOF'
-          plugins { id 'com.android.application' version '8.2.0' apply false }
-          EOF
-          
-          cat > app/src/main/AndroidManifest.xml << 'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET"/>
-              <application android:allowBackup="true" android:label="Wass" android:theme="@android:style/Theme.NoTitleBar">
-                  <activity android:name=".MainActivity" android:exported="true">
-                      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-          
-          cat > app/src/main/java/com/wass/app/MainActivity.java << 'EOF'
-          package com.wass.app;
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          public class MainActivity extends Activity {
-              protected void onCreate(Bundle b){
-                  super.onCreate(b);
-                  WebView w = new WebView(this);
-                  w.getSettings().setJavaScriptEnabled(true);
-                  w.getSettings().setAllowFileAccess(true);
-                  w.setWebViewClient(new WebViewClient());
-                  w.loadUrl("file:///android_asset/index.html");
-                  setContentView(w);
-              }
-          }
-          EOF
-          
-          cat > app/src/main/assets/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-          <style>body{font-family:sans-serif;background:#f5f7ff;padding:20px} .card{background:white;border-radius:16px;padding:20px;margin:10px 0;box-shadow:0 2px 10px #0001} h1{color:#5b5bff} .btn{background:#5b5bff;color:white;padding:12px 20px;border-radius:10px;display:inline-block;text-decoration:none}</style></head>
-          <body><h1>Wass</h1><h3>Ton objectif : LE BEF - Prépare-toi. Progresse. Réussis.</h3>
-          <div class="card"><h2>Mathématiques</h2><p>Cours BEF + Exercices</p><a class="btn" href="#">Commencer</a></div>
-          <div class="card"><h2>Français</h2><p>Grammaire, Dictée</p><a class="btn" href="#">Commencer</a></div>
-          </body></html>
-          EOF
+    runs-on: ubuntu-24.04
 
-      - uses: actions/setup-java@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
-      - uses: android-actions/setup-android@v3
-      - run: chmod +x gradlew || gradle wrapper
-      - run: ./gradlew assembleDebug || gradle assembleDebug
-      - uses: actions/upload-artifact@v4
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          name: Wass-APK
+          gradle-version: '8.7'
+
+      - name: Build APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wass-debug-apk
           path: app/build/outputs/apk/debug/*.apk
